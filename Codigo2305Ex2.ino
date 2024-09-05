@@ -13,8 +13,8 @@ char keymap[numLinhas][numColunas] = {
 byte rowPins[numLinhas] = { 43, 45, 47, 49 };
 byte colPins[numColunas] = { 35, 37, 39, 41 };
 
-int pinoLedVermelho = 8;
-int pinoLedVerde = 9;
+int pinoLedVermelho = 22;
+int pinoLedVerde = 24;
 int pinoBuzzer = 13;
 
 int estadoBomba = 0;
@@ -42,14 +42,12 @@ void setup() {
   i = 0;
   c = 5; //minutos
   display.setBrightness(7);
+  digitalWrite(pinoLedVermelho, LOW);
+  digitalWrite(pinoLedVerde, HIGH);
 }
 
 unsigned long tempoAnterior = 0;
 const unsigned long intervalo = 1000;
-
-unsigned long taB = 0;
-const unsigned ib1 = 1000;
-const unsigned ib2 = 9000;
 
 void displayNumber(int number) {
   display.showNumberDec(number, true);
@@ -67,28 +65,23 @@ void atualizaDisplay() {
       i = 59;
       c--;
     }
-    beep();
     int displayTime = (c * 100) + i;
     display.showNumberDecEx(displayTime, 0b01000000, true);
-    
   }
 }
 
-void beep(){
-unsigned long tempoAtual = millis();
-  if (tempoAtual - taB <= ib1 ) 
-  {
-  digitalWrite(pinoBuzzer, HIGH);
+void beep() {
+  unsigned long tempoAtual = millis();
+
+  if(c == 0 && i == 0){
+    digitalWrite(pinoBuzzer, HIGH);
+    return;
   }
-  else{
-    if (tempoAtual - taB <= ib2 ) 
-    {
-      digitalWrite(pinoBuzzer, LOW);
-    }
-    else
-    {
-      taB = tempoAtual;
-    }
+  
+  if ((tempoAtual - tempoAnterior) < 50) {
+    digitalWrite(pinoBuzzer, HIGH);  
+  } else {
+    digitalWrite(pinoBuzzer, LOW);   
   }
 }
 
@@ -103,40 +96,41 @@ void dadosTeclado() {
     }
     delay(200);
     atualizaDisplay();
-    
+    beep();  
   }
 }
 
 void verificacaoSenha() {
   if (strcmp(entradaSenha, senhaCorreta) == 0) {
     atualizaDisplay();
+    beep();  
     exibirMensagemLCD("Senha Correta!");
     exibirMensagemLCD3("Bomba Desarmada");
     digitalWrite(pinoLedVerde, LOW);
     digitalWrite(pinoLedVermelho, HIGH);
     estadoBomba = 1;
   } else {
-    exibirMensagemLCD("Senha Incorreta!");
+    exibirMensagemLCD2("Incorreta  -25s");
     atualizaDisplay();
+    beep(); 
     digitalWrite(pinoLedVerde, HIGH);
     digitalWrite(pinoLedVermelho, LOW);
     estadoBomba = 0;
-    
-    // Deduct 10 seconds from the remaining time
-    if (c > 0 || (c == 0 && i >= 10)) {
-      if (i >= 10) {
-        i -= 10;
+
+    if (c > 0 || (c == 0 && i >= 25)) {
+      if (i >= 25) {
+        i -= 25;
       } else {
         c--;
-        i = 60 - (10 - i);
+        i = 60 - (25 - i);
       }
     }
   }
 }
 
-
 void loop() {
-  atualizaDisplay();
+  atualizaDisplay();  
+  beep();  
   exibirMensagemLCD("Digite a senha:");
   dadosTeclado();
   verificacaoSenha();
@@ -150,7 +144,7 @@ void exibirMensagemLCD(String mensagem) {
 
 void exibirMensagemLCD2(String mensagem) {
   lcd.clear();
-  lcd.setCursor(2, 0);
+  lcd.setCursor(0, 0);
   lcd.print(mensagem);
   delay(2000);
 }
@@ -161,7 +155,8 @@ void exibirMensagemLCD3(String mensagem) {
   lcd.print(mensagem);                                                                                        
   delay(2000);
 }
-//Codigo para ler o teclado
+
+// Código para ler o teclado
 char getKey() {
   char key = NO_KEY;
   for (int linha = 0; linha < numLinhas; linha++) {
